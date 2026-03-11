@@ -3,35 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Platform Runner - Telegram Game</title>
+    <title>Unity Web Player | Platform Runner</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
 
-    <!-- Telegram Games SDK -->
-    <script src="https://telegram.org/js/games.js"></script>
-
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        }
-
-        #unity-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-
-        #unity-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            background: #231F20;
-        }
-
+        /* Optimize loading display */
         #unity-loading-bar {
             position: absolute;
             left: 50%;
@@ -39,409 +16,113 @@
             transform: translate(-50%, -50%);
             text-align: center;
             z-index: 1000;
-            width: 300px;
         }
 
         #loading {
-            color: #fff;
-            font-size: 24px;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            letter-spacing: 2px;
-        }
-
-        #unity-progress-bar-empty {
-            width: 100%;
-            height: 20px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-            overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.3);
-        }
-
-        #unity-progress-bar-full {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-            border-radius: 10px;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 10px rgba(79, 172, 254, 0.7);
-        }
-
-        #unity-warning {
-            position: absolute;
-            left: 50%;
-            bottom: 20px;
-            transform: translateX(-50%);
-            width: 80%;
-            max-width: 600px;
-            color: #fff;
-            text-align: center;
-            z-index: 1001;
-        }
-
-        #unity-footer {
-            display: none;
-        }
-
-        #unity-fullscreen-button {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 1000;
-            border: 2px solid rgba(255,255,255,0.3);
-            transition: all 0.3s ease;
-        }
-
-            #unity-fullscreen-button:hover {
-                background: rgba(0,0,0,0.7);
-                border-color: #4facfe;
-            }
-
-            #unity-fullscreen-button::before {
-                content: "⛶";
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: white;
-                font-size: 24px;
-            }
-
-        #telegram-user-info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: rgba(255,255,255,0.8);
-            font-size: 12px;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 20px;
-            z-index: 999;
-            pointer-events: none;
-        }
-
-        @media (max-width: 768px) {
-            #loading {
-                font-size: 20px;
-            }
-
-            #telegram-user-info {
-                font-size: 10px;
-                top: 5px;
-                left: 5px;
-            }
+            color: white;
+            font-family: Roboto-Bold;
+            font-size: 30px;
+            margin-bottom: 10px;
         }
     </style>
+
+    <!-- Telegram Game API -->
+    <script>
+        window.TelegramGameProxy = {
+            ready: function () {
+                console.log("Telegram Game Ready!");
+            },
+            sendData: function (data) {
+                console.log("Data sent to bot:", data);
+            }
+        };
+    </script>
 </head>
 <body>
-    <div id="unity-container">
-        <canvas id="unity-canvas" tabindex="-1"></canvas>
-
-        <!-- Telegram User Info (Optional) -->
-        <div id="telegram-user-info"></div>
-
-        <!-- Loading Bar -->
+    <div id="unity-container" class="unity-desktop">
+        <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
         <div id="unity-loading-bar">
-            <div id="loading">LOADING GAME...</div>
+            <div id="loading">LOADING...</div>
             <div id="unity-progress-bar-empty">
                 <div id="unity-progress-bar-full"></div>
             </div>
         </div>
-
-        <!-- Warning Banner -->
         <div id="unity-warning"></div>
-
-        <!-- Fullscreen Button -->
-        <div id="unity-fullscreen-button" onclick="toggleFullscreen()"></div>
+        <div id="unity-footer">
+            <div id="unity-fullscreen-button"></div>
+            <div id="unity-build-title">Platform Runner</div>
+        </div>
     </div>
 
     <script>
-        // ============================================
-        // TELEGRAM INTEGRATION
-        // ============================================
-
-        // Initialize Telegram Game
-        window.TelegramGameProxy = {
-            initData: window.Telegram?.Game?.initData || '',
-            initDataUnsafe: window.Telegram?.Game?.initDataUnsafe || { user: {} },
-
-            ready: function () {
-                console.log("✅ Telegram Game Ready!");
-                if (window.Telegram?.Game?.ready) {
-                    window.Telegram.Game.ready();
-                }
-
-                // Hide loading bar after Unity is ready
-                setTimeout(() => {
-                    document.getElementById('unity-loading-bar').style.display = 'none';
-                }, 500);
-            },
-
-            sendData: function (data) {
-                console.log("📤 Sending data to bot:", data);
-                if (window.Telegram?.Game?.sendData) {
-                    window.Telegram.Game.sendData(data);
-                } else {
-                    // Fallback for testing
-                    console.log("Data sent (simulated):", data);
-                }
-            },
-
-            shareScore: function () {
-                console.log("🏆 Share score requested");
-                if (window.Telegram?.Game?.shareScore) {
-                    window.Telegram.Game.shareScore();
-                }
-            }
-        };
-
-        // Get Telegram User Info
-        function getTelegramUser() {
-            try {
-                if (window.Telegram && window.Telegram.Game) {
-                    const user = window.Telegram.Game.initDataUnsafe?.user;
-                    if (user) {
-                        return {
-                            id: user.id,
-                            first_name: user.first_name || '',
-                            last_name: user.last_name || '',
-                            username: user.username || '',
-                            language_code: user.language_code || 'en'
-                        };
-                    }
-                }
-                return null;
-            } catch (e) {
-                console.log("Error getting user:", e);
-                return null;
-            }
-        }
-
-        // Display Telegram User Info
-        function displayUserInfo() {
-            const user = getTelegramUser();
-            const infoDiv = document.getElementById('telegram-user-info');
-
-            if (user && user.first_name) {
-                infoDiv.textContent = `👤 ${user.first_name} ${user.last_name || ''}`.trim();
-                infoDiv.style.display = 'block';
-            } else {
-                infoDiv.style.display = 'none';
-            }
-        }
-
-        // ============================================
-        // UNITY WEBGL SETUP
-        // ============================================
-
         var canvas = document.querySelector("#unity-canvas");
 
-        // Banner for warnings/errors
         function unityShowBanner(msg, type) {
             var warningBanner = document.querySelector("#unity-warning");
-
             function updateBannerVisibility() {
                 warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
             }
-
             var div = document.createElement('div');
             div.innerHTML = msg;
-
-            if (type == 'error') {
-                div.style.cssText = 'background: rgba(255,0,0,0.8); color: white; padding: 15px; border-radius: 8px; margin: 5px; font-size: 14px;';
-                console.error('Unity Error:', msg);
-            } else if (type == 'warning') {
-                div.style.cssText = 'background: rgba(255,255,0,0.8); color: black; padding: 10px; border-radius: 8px; margin: 5px; font-size: 14px;';
-                console.warn('Unity Warning:', msg);
+            warningBanner.appendChild(div);
+            if (type == 'error') div.style = 'background: red; padding: 10px;';
+            else {
+                if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
                 setTimeout(function () {
-                    if (warningBanner.contains(div)) {
-                        warningBanner.removeChild(div);
-                        updateBannerVisibility();
-                    }
+                    warningBanner.removeChild(div);
+                    updateBannerVisibility();
                 }, 5000);
             }
-
-            warningBanner.appendChild(div);
             updateBannerVisibility();
         }
 
-        // GitHub Pages URL - REPLACE WITH YOUR GITHUB USERNAME AND REPO
-        const GITHUB_USERNAME = "YOUR_USERNAME"; // Replace with your GitHub username
-        const REPO_NAME = "YOUR_REPO_NAME"; // Replace with your repository name
-        const BUILD_FOLDER = "Build"; // Your build folder name
-
-        // Construct GitHub Pages URL
-        const baseUrl = `https://${GITHUB_USERNAME}.github.io/${REPO_NAME}/`;
-        const buildUrl = baseUrl + BUILD_FOLDER;
-
-        // Unity Build Configuration
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/169c2446db36be63ebd9fd6c3d07314c.loader.js";
         var config = {
             arguments: [],
             dataUrl: buildUrl + "/f686966365d29954017e4681467dd835.data.unityweb",
             frameworkUrl: buildUrl + "/431ba46b970cfb5ca918b5ca8715fdd7.framework.js.unityweb",
             codeUrl: buildUrl + "/513e323984aa700b0a6381106fa9bfa2.wasm.unityweb",
-            streamingAssetsUrl: baseUrl + "StreamingAssets",
+            streamingAssetsUrl: "StreamingAssets",
             companyName: "DefaultCompany",
-            productName: "Platform Runner",
+            productName: "2D platformer",
             productVersion: "1.0",
             showBanner: unityShowBanner
         };
 
-        // Mobile detection and optimization
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            // Add viewport meta for mobile
             var meta = document.createElement('meta');
             meta.name = 'viewport';
             meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
             document.getElementsByTagName('head')[0].appendChild(meta);
 
-            // Adjust canvas for mobile
+            document.querySelector("#unity-container").className = "unity-mobile";
             canvas.className = "unity-mobile";
-            config.devicePixelRatio = window.devicePixelRatio;
+
+            config.devicePixelRatio = 1; // optional: improve performance on mobile
         } else {
-            // Desktop optimization
-            canvas.style.maxWidth = "100%";
-            canvas.style.maxHeight = "100vh";
+            canvas.style.width = "960px";
+            canvas.style.height = "600px";
         }
 
-        // ============================================
-        // LOAD UNITY GAME
-        // ============================================
-
-        // Show loading bar
         document.querySelector("#unity-loading-bar").style.display = "block";
 
-        // Display user info if available
-        displayUserInfo();
-
-        // Notify Telegram that game is loading
-        if (window.Telegram?.Game?.ready) {
-            window.Telegram.Game.ready();
-        }
-
-        // Load Unity loader script
         var script = document.createElement("script");
-        script.src = buildUrl + "/169c2446db36be63ebd9fd6c3d07314c.loader.js";
-
+        script.src = loaderUrl;
         script.onload = () => {
-            console.log("✅ Unity loader loaded, creating instance...");
-
             createUnityInstance(canvas, config, (progress) => {
-                // Update loading progress
                 document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-                console.log(`Loading: ${Math.round(progress * 100)}%`);
-
-                if (progress >= 0.9) {
-                    document.querySelector("#loading").textContent = "ALMOST THERE...";
-                }
             }).then((unityInstance) => {
-                console.log("✅ Unity instance created successfully!");
-
-                // Store unity instance globally for access
-                window.unityInstance = unityInstance;
-
-                // Hide loading bar
                 document.querySelector("#unity-loading-bar").style.display = "none";
-
-                // Notify Telegram that game is ready
-                window.TelegramGameProxy.ready();
-
-                // Setup fullscreen button
                 document.querySelector("#unity-fullscreen-button").onclick = () => {
                     unityInstance.SetFullscreen(1);
                 };
-
-                // Send ready event to Unity (if needed)
-                if (window.unityInstance) {
-                    try {
-                        window.unityInstance.SendMessage('TelegramBridge', 'OnTelegramReady', '');
-                    } catch (e) {
-                        console.log("Unity TelegramBridge not found");
-                    }
-                }
-
             }).catch((message) => {
-                console.error("❌ Failed to create Unity instance:", message);
-                alert("Failed to load game: " + message);
-                document.querySelector("#unity-loading-bar").style.display = "none";
+                alert(message);
             });
         };
 
-        script.onerror = (error) => {
-            console.error("❌ Failed to load Unity loader:", error);
-            alert("Failed to load game. Please check your internet connection and try again.");
-        };
-
-        // Add script to document
         document.body.appendChild(script);
-
-        // ============================================
-        // UTILITY FUNCTIONS
-        // ============================================
-
-        // Toggle fullscreen
-        function toggleFullscreen() {
-            if (window.unityInstance) {
-                window.unityInstance.SetFullscreen(1);
-            } else {
-                // Fallback for browser fullscreen
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen();
-                }
-            }
-        }
-
-        // Send score to Telegram
-        window.sendScore = function (score) {
-            if (window.TelegramGameProxy) {
-                const scoreData = JSON.stringify({
-                    score: score,
-                    timestamp: Date.now()
-                });
-                window.TelegramGameProxy.sendData(scoreData);
-            }
-        };
-
-        // Handle visibility change (save game state)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                console.log('Game hidden, saving state...');
-                // You can notify Unity about visibility change
-                if (window.unityInstance) {
-                    try {
-                        window.unityInstance.SendMessage('GameManager', 'OnGameHidden', '');
-                    } catch (e) {
-                        // Ignore if method doesn't exist
-                    }
-                }
-            } else {
-                console.log('Game visible again');
-                if (window.unityInstance) {
-                    try {
-                        window.unityInstance.SendMessage('GameManager', 'OnGameVisible', '');
-                    } catch (e) {
-                        // Ignore if method doesn't exist
-                    }
-                }
-            }
-        });
-
-        // Error handling for uncaught errors
-        window.addEventListener('error', (event) => {
-            console.error('Uncaught error:', event.error);
-            // Don't show Unity errors to users unless critical
-            if (event.message && event.message.includes('Unity')) {
-                // Optionally handle Unity errors
-            }
-        });
-
-        console.log("🚀 Telegram Game initialized with GitHub Pages URL:", baseUrl);
     </script>
 </body>
 </html>
